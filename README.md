@@ -1,3 +1,6 @@
+Here is a clean, production-ready `README.md` tailored specifically for **PujoNavigate**. You can copy and paste this directly into your repository's root `README.md`.
+
+```markdown
 # 🪔 PujoNavigate
 
 > A lightweight, mobile-first crowd navigation and accessibility guide for Kolkata Durga Puja.
@@ -35,4 +38,104 @@ During Durga Puja, millions of visitors navigate dense pedestrian corridors acro
 ## 🛠️ Tech Stack
 
 - **Framework:** [React](https://react.dev/) + [Vite](https://vitejs.dev/)
-- **Styl
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/) + [Lucide React](https://lucide.dev/) (Icons)
+- **Mapping:** [Leaflet](https://leafletjs.com/) / [React-Leaflet](https://react-leaflet.js.org/)
+- **Hosting & CI/CD:** [Render](https://render.com/) (Static Site)
+
+---
+
+## 🚀 Quick Start (Local Setup)
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (version 18.x or later)
+- `npm` or `pnpm`
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/sapghosh55-lab/PujoNavigate.git](https://github.com/sapghosh55-lab/PujoNavigate.git)
+   cd PujoNavigate
+
+```
+
+2. **Install dependencies:**
+```bash
+npm install
+
+```
+
+
+3. **Start the local development server:**
+```bash
+npm run dev
+
+```
+
+
+Open `http://localhost:5173` in your browser.
+4. **Build for production:**
+```bash
+npm run build
+
+```
+
+
+The production-ready assets will be generated in the `dist/` directory.
+
+---
+
+## 📂 Project Structure
+
+```text
+PujoNavigate/
+├── public/              # Static assets, icons, and geoJSON markers
+├── src/
+│   ├── assets/          # Custom SVG markers and graphics
+│   ├── components/      # UI components (Map, FilterDrawer, CrowdModal)
+│   ├── data/            # Curated pandal coordinates and accessibility tags
+│   ├── App.jsx          # Main application orchestrator
+│   ├── main.jsx         # React DOM mount point
+│   └── index.css        # Tailwind directives and custom map CSS
+├── index.html           # HTML entry point with mobile viewport settings
+├── vite.config.js       # Vite configuration
+├── tailwind.config.js   # Custom festival-themed color palette
+└── package.json
+
+```
+
+---
+
+## 🌐 Deployment (Render)
+
+This project is optimized for deployment as a **Static Site** on Render:
+
+| Field | Configuration |
+| --- | --- |
+| **Type** | Static Site |
+| **Build Command** | `npm install && npm run build` |
+| **Publish Directory** | `dist` |
+| **SPA Rewrite Rule** | Source: `/*` ➔ Destination: `/index.html` |
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! If you want to submit crowd data points, update barricade paths, or optimize map rendering:
+
+1. Fork the Project.
+2. Create your Feature Branch (`git checkout -b feature/AddClusterData`).
+3. Commit your Changes (`git commit -m "feat: add Salt Lake pandal coordinates"`).
+4. Push to the Branch (`git push origin feature/AddClusterData`).
+5. Open a Pull Request.
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+```
+
+```
