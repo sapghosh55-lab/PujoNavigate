@@ -65,29 +65,29 @@ export const EmergencyHelplineModal: React.FC<EmergencyHelplineModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4 animate-in fade-in duration-150 select-none"
+      className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4 animate-in fade-in duration-200 select-none"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="w-full max-w-lg max-h-[90vh] bg-[#141824] border border-slate-700/80 rounded-t-3xl sm:rounded-2xl p-5 text-slate-100 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-150"
+        className="w-full max-w-lg max-h-[90vh] bg-[#0d121f]/95 backdrop-blur-2xl border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 text-slate-100 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Mobile handle */}
-        <div className="w-10 h-1 bg-slate-600/70 rounded-full mx-auto mb-3 sm:hidden" />
+        <div className="w-12 h-1.5 bg-slate-600/60 rounded-full mx-auto mb-3 sm:hidden" />
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 text-lg">
+        <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-300 text-xl shadow-lg shadow-rose-500/15">
               🚨
             </div>
             <div>
-              <h2 className="text-base font-bold text-white tracking-tight">
+              <h2 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
                 Emergency & Puja Helpline
               </h2>
-              <p className="text-xs text-rose-400 font-medium">
+              <p className="text-xs text-rose-400 font-semibold">
                 Official Kolkata Police & Medical Support Numbers
               </p>
             </div>
@@ -96,19 +96,19 @@ export const EmergencyHelplineModal: React.FC<EmergencyHelplineModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm transition-colors"
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center text-sm transition-all active:scale-90"
           >
             ✕
           </button>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto pr-1 py-3 space-y-3">
+        <div className="overflow-y-auto pr-1 py-3.5 space-y-3.5">
           {/* Kolkata Metro Night Advisory */}
-          <div className="p-3.5 rounded-2xl bg-sky-950/40 border border-sky-500/30 text-xs">
-            <div className="flex items-center gap-2 font-bold text-sky-300 mb-1">
-              <span>🚇</span>
-              <span>Kolkata Metro Special Puja Night Services:</span>
+          <div className="p-4 rounded-2xl bg-sky-950/40 border border-sky-400/30 text-xs shadow-md">
+            <div className="flex items-center gap-2 font-bold text-sky-300 mb-1.5">
+              <span className="text-base">🚇</span>
+              <span className="text-sm">Kolkata Metro Special Puja Night Services:</span>
             </div>
             <p className="text-[11px] text-slate-300 leading-relaxed">
               Operating all-night trains on <strong>Blue Line (Dakshineswar - Kavi Subhash)</strong>{' '}
@@ -118,19 +118,19 @@ export const EmergencyHelplineModal: React.FC<EmergencyHelplineModalProps> = ({
           </div>
 
           {/* Emergency Helplines Cards */}
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {HELPLINES.map((item) => (
               <div
                 key={item.number}
-                className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-between gap-3 hover:border-slate-600 transition-colors"
+                className="p-3.5 rounded-2xl bg-[#141b2d]/80 hover:bg-[#182138] border border-white/[0.08] hover:border-rose-400/40 flex items-center justify-between gap-3 transition-all duration-200 shadow-md group"
               >
                 <div className="flex items-start gap-3">
-                  <span className="text-xl mt-0.5">{item.icon}</span>
+                  <span className="text-2xl mt-0.5">{item.icon}</span>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-bold text-white">{item.name}</h4>
+                      <h4 className="text-xs font-bold text-white group-hover:text-amber-200 transition-colors">{item.name}</h4>
                       <span
-                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${item.badgeColor}`}
+                        className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${item.badgeColor}`}
                       >
                         {item.badge}
                       </span>
@@ -141,7 +141,7 @@ export const EmergencyHelplineModal: React.FC<EmergencyHelplineModalProps> = ({
 
                 <a
                   href={`tel:${item.number}`}
-                  className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-md shadow-rose-600/30 active:scale-95 transition-all flex items-center gap-1.5 flex-shrink-0"
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 text-white font-black text-xs shadow-md shadow-rose-500/25 active:scale-95 transition-all flex items-center gap-1.5 flex-shrink-0"
                 >
                   <span>📞</span>
                   <span>{item.number}</span>
@@ -151,8 +151,8 @@ export const EmergencyHelplineModal: React.FC<EmergencyHelplineModalProps> = ({
           </div>
 
           {/* Police Barricade Pedestrian Guidelines */}
-          <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/40 text-[11px] text-slate-400 space-y-1">
-            <span className="block font-bold text-slate-300">
+          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-[11px] text-slate-300 space-y-1.5">
+            <span className="block font-bold text-amber-300">
               📌 Kolkata Police Pedestrian Advisory:
             </span>
             <p>• Avoid crossing Rashbehari Avenue or Central Avenue at street level during rush hours.</p>
@@ -162,11 +162,11 @@ export const EmergencyHelplineModal: React.FC<EmergencyHelplineModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-slate-800">
+        <div className="pt-2 border-t border-white/10">
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs active:scale-[0.98] transition-all"
+            className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs active:scale-[0.98] transition-all border border-white/10"
           >
             Close Helplines
           </button>

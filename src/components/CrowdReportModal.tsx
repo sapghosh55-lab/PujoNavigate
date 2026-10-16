@@ -41,10 +41,10 @@ const REPORT_TARGETS: ReportTarget[] = [
     subtitle: '<15m wait',
     statusLevel: 1,
     estimatedMinutes: 8,
-    bgGradient: 'hover:bg-emerald-500/10 active:bg-emerald-500/20 bg-slate-800/80',
+    bgGradient: 'hover:bg-emerald-500/10 active:bg-emerald-500/20 bg-[#141b2d]/80',
     borderColor: 'border-emerald-500/30 hover:border-emerald-400',
     textColor: 'text-emerald-300',
-    badgeColor: 'bg-emerald-500/20 text-emerald-300',
+    badgeColor: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
     accentDot: 'bg-emerald-400',
   },
   {
@@ -53,10 +53,10 @@ const REPORT_TARGETS: ReportTarget[] = [
     subtitle: '15–30m wait',
     statusLevel: 2,
     estimatedMinutes: 22,
-    bgGradient: 'hover:bg-amber-500/10 active:bg-amber-500/20 bg-slate-800/80',
+    bgGradient: 'hover:bg-amber-500/10 active:bg-amber-500/20 bg-[#141b2d]/80',
     borderColor: 'border-amber-500/30 hover:border-amber-400',
     textColor: 'text-amber-300',
-    badgeColor: 'bg-amber-500/20 text-amber-300',
+    badgeColor: 'bg-amber-500/20 text-amber-300 border border-amber-500/40',
     accentDot: 'bg-amber-400',
   },
   {
@@ -65,10 +65,10 @@ const REPORT_TARGETS: ReportTarget[] = [
     subtitle: '30–60m wait',
     statusLevel: 3,
     estimatedMinutes: 45,
-    bgGradient: 'hover:bg-orange-500/10 active:bg-orange-500/20 bg-slate-800/80',
+    bgGradient: 'hover:bg-orange-500/10 active:bg-orange-500/20 bg-[#141b2d]/80',
     borderColor: 'border-orange-500/30 hover:border-orange-400',
     textColor: 'text-orange-300',
-    badgeColor: 'bg-orange-500/20 text-orange-300',
+    badgeColor: 'bg-orange-500/20 text-orange-300 border border-orange-500/40',
     accentDot: 'bg-orange-400',
   },
   {
@@ -77,10 +77,10 @@ const REPORT_TARGETS: ReportTarget[] = [
     subtitle: '60m+ wait',
     statusLevel: 4,
     estimatedMinutes: 75,
-    bgGradient: 'hover:bg-rose-500/10 active:bg-rose-500/20 bg-slate-800/80',
+    bgGradient: 'hover:bg-rose-500/10 active:bg-rose-500/20 bg-[#141b2d]/80',
     borderColor: 'border-rose-500/30 hover:border-rose-400',
     textColor: 'text-rose-300',
-    badgeColor: 'bg-rose-500/20 text-rose-300',
+    badgeColor: 'bg-rose-500/20 text-rose-300 border border-rose-500/40',
     accentDot: 'bg-rose-400',
   },
 ];
@@ -195,45 +195,45 @@ export const CrowdReportModal: React.FC<CrowdReportModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm animate-in fade-in duration-150 p-0 sm:p-4 select-none"
+      className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200 p-0 sm:p-4 select-none"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="w-full max-w-md bg-[#161a23] border border-slate-700/80 rounded-t-3xl sm:rounded-2xl p-4 pt-3 pb-6 text-slate-100 shadow-2xl animate-in slide-in-from-bottom-5 duration-150"
+        className="w-full max-w-md bg-[#0d121f]/95 backdrop-blur-2xl border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 text-slate-100 shadow-2xl animate-in slide-in-from-bottom-5 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Mobile Swipe / Drag indicator */}
-        <div className="w-10 h-1 bg-slate-600/70 rounded-full mx-auto mb-2.5 sm:hidden" />
+        <div className="w-12 h-1.5 bg-slate-600/60 rounded-full mx-auto mb-3 sm:hidden" />
 
         {isSuccess ? (
           /* Instant Success State */
           <div className="py-6 text-center">
-            <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 text-2xl shadow-lg shadow-emerald-500/20 animate-in zoom-in-75 duration-150">
-              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 text-3xl shadow-xl shadow-emerald-500/20 animate-in zoom-in-75 duration-200">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 className="text-lg font-bold text-white mb-0.5">Report Recorded!</h3>
-            <p className="text-xs text-slate-400">
+            <h3 className="text-xl font-extrabold text-white mb-1">Report Recorded!</h3>
+            <p className="text-xs text-slate-400 font-medium">
               Live wait updated for fellow pandal-hoppers.
             </p>
           </div>
         ) : (
           <>
             {/* Header: Pandal Name + Bengali Name */}
-            <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-white/10">
               <div>
                 {pandalNameBn && (
-                  <p className="text-xs font-semibold text-amber-400 tracking-wide">
+                  <p className="text-xs font-bold text-amber-400/90 font-bengali tracking-wide mb-0.5">
                     {pandalNameBn}
                   </p>
                 )}
-                <h3 className="text-base font-bold text-white leading-tight">
+                <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
                   {pandalNameEn}
                 </h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-400 mt-1">
                   Tap your current crowd status (1 tap to submit):
                 </p>
               </div>
@@ -241,7 +241,7 @@ export const CrowdReportModal: React.FC<CrowdReportModalProps> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs flex-shrink-0 transition-colors"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center text-sm flex-shrink-0 transition-all active:scale-90"
               >
                 ✕
               </button>

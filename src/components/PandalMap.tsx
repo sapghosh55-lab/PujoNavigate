@@ -3,13 +3,16 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Pandal, FilterChip } from '../types/pandal';
+import { FoodPlace } from '../types/food';
 import { MOCK_PANDALS } from '../data/mockPandals';
+import { KOLKATA_FOOD_PLACES } from '../data/kolkataFoodPlaces';
 import { Coordinates } from '../data/kolkataCrossings';
 import { CrowdReportModal, CrowdReportSubmission } from './CrowdReportModal';
 import { CircuitPlannerModal } from './CircuitPlannerModal';
 import { PandalListView } from './PandalListView';
 import { CuratedCircuitsModal } from './CuratedCircuitsModal';
 import { EmergencyHelplineModal } from './EmergencyHelplineModal';
+import { FoodExplorerModal } from './FoodExplorerModal';
 import { CuratedCircuit } from '../data/curatedCircuits';
 import { getWaitTimeColorConfig } from '../utils/colorConfig';
 import { dhakPlayer } from '../utils/dhakAudio';
@@ -17,6 +20,11 @@ import {
   calculateOptimalHoppingCircuit,
   PedestrianHoppingCircuit,
 } from '../utils/pedestrianRouter';
+import {
+  getNearbyFoodForPandal,
+  getFoodNavigationUrl,
+  generateFoodShareText,
+} from '../utils/foodProximity';
 
 // Kolkata City Coordinates (Exact requested center)
 const KOLKATA_CENTER: [number, number] = [22.5726, 88.3639];
@@ -54,20 +62,20 @@ const createPandalIcon = (
   const isInCircuit = circuitIndex >= 0;
 
   let badgeContent = `${waitTime}m`;
-  let borderStyle = '2px solid rgba(255,255,255,0.9)';
+  let borderStyle = '2px solid rgba(255,255,255,0.95)';
   let bgGradient = config.markerGradient;
   let shadow = config.boxShadow;
 
   if (isVisited) {
     badgeContent = '✓';
-    bgGradient = 'linear-gradient(135deg, #059669, #047857)';
-    borderStyle = '2.5px solid #6ee7b7';
-    shadow = '0 0 16px rgba(16, 185, 129, 0.85)';
+    bgGradient = 'linear-gradient(135deg, #10b981, #047857)';
+    borderStyle = '2.5px solid #a7f3d0';
+    shadow = '0 0 18px rgba(16, 185, 129, 0.9)';
   } else if (isInCircuit) {
     badgeContent = `#${circuitIndex + 1}`;
-    bgGradient = 'linear-gradient(135deg, #f59e0b, #d97706)';
+    bgGradient = 'linear-gradient(135deg, #f59e0b, #b45309)';
     borderStyle = '2.5px solid #fef08a';
-    shadow = '0 0 18px rgba(245, 158, 11, 0.85)';
+    shadow = '0 0 20px rgba(245, 158, 11, 0.9)';
   }
 
   if (isSelected) {
@@ -77,19 +85,61 @@ const createPandalIcon = (
   return L.divIcon({
     className: 'custom-pandal-marker-wrapper',
     html: `
-      <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-        <div class="animate-marker-pulse" style="position: absolute; width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle, ${config.pulseRgba} 0%, rgba(0,0,0,0) 70%); pointer-events: none;"></div>
-        <div style="position: relative; width: 38px; height: 38px; border-radius: 50%; background: ${bgGradient}; border: ${borderStyle}; box-shadow: ${shadow}; display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 800; font-size: ${
+      <div style="position: relative; width: 44px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; cursor: pointer;">
+        <div class="animate-marker-pulse" style="position: absolute; top: 0; width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle, ${config.pulseRgba} 0%, rgba(0,0,0,0) 70%); pointer-events: none;"></div>
+        <div style="position: relative; width: 38px; height: 38px; border-radius: 50%; background: ${bgGradient}; border: ${borderStyle}; box-shadow: ${shadow}, inset 0 2px 4px rgba(255,255,255,0.35); display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 800; font-size: ${
       isVisited ? '14px' : '11px'
     }; transform: ${
       isSelected ? 'scale(1.22)' : isInCircuit ? 'scale(1.12)' : 'scale(1)'
-    }; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
+    }; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);">
           <span>${badgeContent}</span>
         </div>
+        <div style="width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid ${isSelected ? '#ffffff' : 'rgba(255,255,255,0.75)'}; margin-top: -1px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));"></div>
       </div>
     `,
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
+    iconSize: [44, 50],
+    iconAnchor: [22, 44],
+  });
+};
+
+// ----------------------------------------------------------------------------
+// Custom Leaflet Marker for Food & Street Bites by Budget Tier
+// ----------------------------------------------------------------------------
+const createFoodIcon = (food: FoodPlace, isSelected: boolean): L.DivIcon => {
+  let badgeSymbol = '🪙';
+  let bgGradient = 'linear-gradient(135deg, #10b981, #047857)';
+  let borderColor = '#6ee7b7';
+  let shadow = '0 0 16px rgba(16, 185, 129, 0.8)';
+
+  if (food.budget_tier === 'moderate') {
+    badgeSymbol = '🍽️';
+    bgGradient = 'linear-gradient(135deg, #f59e0b, #b45309)';
+    borderColor = '#fef08a';
+    shadow = '0 0 18px rgba(245, 158, 11, 0.85)';
+  } else if (food.budget_tier === 'premium') {
+    badgeSymbol = '👑';
+    bgGradient = 'linear-gradient(135deg, #9333ea, #6b21a8)';
+    borderColor = '#f3e8ff';
+    shadow = '0 0 20px rgba(168, 85, 247, 0.9)';
+  }
+
+  return L.divIcon({
+    className: 'custom-food-marker-wrapper',
+    html: `
+      <div style="position: relative; width: 42px; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; cursor: pointer;">
+        <div style="position: absolute; top: 0; width: 38px; height: 38px; border-radius: 50%; background: ${bgGradient}; opacity: 0.35; filter: blur(3px); pointer-events: none;"></div>
+        <div style="position: relative; width: 34px; height: 34px; border-radius: 50%; background: ${bgGradient}; border: 2.5px solid ${
+      isSelected ? '#ffffff' : borderColor
+    }; box-shadow: ${shadow}, inset 0 2px 4px rgba(255,255,255,0.35); display: flex; align-items: center; justify-content: center; font-size: 14px; transform: ${
+      isSelected ? 'scale(1.25)' : 'scale(1)'
+    }; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);">
+          <span>${badgeSymbol}</span>
+        </div>
+        <div style="width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid ${isSelected ? '#ffffff' : borderColor}; margin-top: -1px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));"></div>
+      </div>
+    `,
+    iconSize: [42, 48],
+    iconAnchor: [21, 42],
   });
 };
 
@@ -187,6 +237,12 @@ export const PandalMap: React.FC<PandalMapProps> = ({
   const [isTrailsModalOpen, setIsTrailsModalOpen] = useState<boolean>(false);
   const [isHelplineModalOpen, setIsHelplineModalOpen] = useState<boolean>(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
+  const [isFoodModalOpen, setIsFoodModalOpen] = useState<boolean>(false);
+  const [foodModalPandalId, setFoodModalPandalId] = useState<string | null>(null);
+
+  // Food Layer & Selection
+  const [showFoodMarkers, setShowFoodMarkers] = useState<boolean>(true);
+  const [selectedFood, setSelectedFood] = useState<FoodPlace | null>(null);
 
   // Toast message
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -448,6 +504,11 @@ export const PandalMap: React.FC<PandalMapProps> = ({
   const medicalKiosk = selectedPandal?.medical_kiosk ?? selectedPandal?.medical_booth;
   const restroomNearby = selectedPandal?.restroom_nearby;
 
+  // Nearby Food Places for selected pandal
+  const nearbyFoods = useMemo(() => {
+    return selectedPandal ? getNearbyFoodForPandal(selectedPandal, KOLKATA_FOOD_PLACES, 3) : [];
+  }, [selectedPandal]);
+
   // Direct pedestrian barricade walking navigation trigger
   const handleLaunchNavigation = () => {
     const isApple = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
@@ -476,228 +537,281 @@ export const PandalMap: React.FC<PandalMapProps> = ({
         </div>
       )}
 
-      {/* ----------------- Top Header & Navbar ----------------- */}
-      <header className="absolute top-0 left-0 right-0 z-[1000] p-3 pb-2 bg-gradient-to-b from-[#0b0e14]/98 via-[#0b0e14]/90 to-transparent pointer-events-none">
-        {/* Brand & Action Controls */}
-        <div className="flex items-center justify-between mb-2 pointer-events-auto">
-          {/* Logo & Live Pandal Status */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/30 text-base">
-              🪔
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-extrabold text-white tracking-tight leading-none font-heading">
-                  PujoNavigate
-                </h1>
-                <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  70 Live
-                </span>
-                {visitedPandalIds.length > 0 && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                    ✓ {visitedPandalIds.length} Visited
-                  </span>
-                )}
+      {/* ----------------- Top Floating Luxury Island Navbar ----------------- */}
+      <header className="absolute top-2.5 left-2.5 right-2.5 z-[1000] max-w-6xl mx-auto pointer-events-none">
+        <div className="p-3 bg-[#0a0e1a]/85 backdrop-blur-2xl border border-white/10 rounded-2xl sm:rounded-3xl shadow-[0_16px_40px_-10px_rgba(0,0,0,0.7)] pointer-events-auto space-y-2.5">
+          {/* Row 1: Brand Logo + Search Input + Glass Actions */}
+          <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+            {/* Brand Title & Live Indicator */}
+            <div className="flex items-center gap-2.5 flex-shrink-0">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-[0_0_20px_rgba(245,158,11,0.45)] text-lg">
+                🪔
               </div>
-              <span className="text-[10px] text-amber-300 font-medium tracking-wide">
-                শারদোৎসব ২০২৬ • Kolkata Durga Puja
-              </span>
-            </div>
-          </div>
-
-          {/* Right Action Icons: Dhak Ambience + Curated Trails + SOS Helpline + View Toggle */}
-          <div className="flex items-center gap-1.5">
-            {/* Dhak Ambience Player */}
-            <button
-              type="button"
-              onClick={handleToggleDhak}
-              className={`p-1.5 px-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1 ${
-                isDhakPlaying
-                  ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md shadow-amber-400/30 animate-pulse'
-                  : 'bg-slate-900/90 border-slate-700/60 text-amber-300 hover:text-white'
-              }`}
-              title={isDhakPlaying ? 'Pause Dhak Ambience' : 'Play Festive Dhak Ambience'}
-            >
-              <span>🪘</span>
-              <span className="hidden sm:inline">{isDhakPlaying ? 'Playing' : 'Dhak'}</span>
-            </button>
-
-            {/* Curated Trails Button */}
-            <button
-              type="button"
-              onClick={() => setIsTrailsModalOpen(true)}
-              className="p-1.5 px-2 rounded-xl text-xs font-bold bg-slate-900/90 border border-slate-700/60 text-amber-300 hover:text-white transition-all flex items-center gap-1"
-              title="Curated Pandal Trails"
-            >
-              <span>✨</span>
-              <span className="hidden sm:inline">Trails</span>
-            </button>
-
-            {/* Emergency Helpline Button */}
-            <button
-              type="button"
-              onClick={() => setIsHelplineModalOpen(true)}
-              className="p-1.5 px-2 rounded-xl text-xs font-bold bg-rose-500/20 border border-rose-500/40 text-rose-300 hover:text-white transition-all flex items-center gap-1"
-              title="Emergency & Traffic Helpline"
-            >
-              <span>🚨</span>
-              <span className="hidden sm:inline">SOS</span>
-            </button>
-
-            {/* View Mode Switcher */}
-            <div className="flex items-center bg-slate-900/90 border border-slate-700/60 rounded-xl p-0.5 shadow-md">
-              <button
-                type="button"
-                onClick={() => setViewMode('map')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  viewMode === 'map'
-                    ? 'bg-amber-400 text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                title="Map View"
-              >
-                🗺️
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  viewMode === 'list'
-                    ? 'bg-amber-400 text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                title="List View"
-              >
-                📋
-              </button>
-            </div>
-
-            {/* Circuit Planner Trigger Button */}
-            <button
-              type="button"
-              onClick={() => setIsCircuitModalOpen(true)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                circuitPandalIds.length > 0
-                  ? 'bg-amber-500/20 border-amber-400/80 text-amber-300 shadow-md shadow-amber-500/20 animate-pulse'
-                  : 'bg-slate-900/90 border-slate-700/60 text-slate-300 hover:text-white'
-              }`}
-              title="Open Hopping Circuit Planner"
-            >
-              <span>🧭</span>
-              {circuitPandalIds.length > 0 && (
-                <span className="w-4 h-4 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center">
-                  {circuitPandalIds.length}
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base sm:text-lg font-black tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-r from-white via-amber-100 to-amber-300 font-heading">
+                    PujoNavigate
+                  </h1>
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)] uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    70 Live
+                  </span>
+                  {visitedPandalIds.length > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      ✓ {visitedPandalIds.length} Visited
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-amber-300/80 font-medium tracking-wide">
+                  শারদোৎসব ২০২৬ • Kolkata Durga Puja
                 </span>
+              </div>
+            </div>
+
+            {/* Centered Desktop Search Input */}
+            <div className="relative flex-1 max-w-sm hidden md:block">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search 70 pandals, metro, or dishes..."
+                className="w-full py-1.5 pl-8 pr-7 rounded-xl bg-slate-900/90 border border-white/10 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/50 transition-all shadow-inner"
+              />
+              <span className="absolute left-2.5 top-2 text-xs text-slate-400 pointer-events-none">
+                🔍
+              </span>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1.5 text-slate-400 hover:text-white text-xs w-4 h-4 rounded-full flex items-center justify-center"
+                >
+                  ✕
+                </button>
               )}
-            </button>
+            </div>
+
+            {/* Action Buttons Cluster */}
+            <div className="flex items-center gap-1.5 ml-auto">
+              {/* Dhak Ambience Player */}
+              <button
+                type="button"
+                onClick={handleToggleDhak}
+                className={`p-1.5 px-2.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
+                  isDhakPlaying
+                    ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)] animate-pulse'
+                    : 'bg-slate-900/80 border-white/10 text-amber-300 hover:text-white hover:border-amber-400/40'
+                }`}
+                title={isDhakPlaying ? 'Pause Dhak Ambience' : 'Play Festive Dhak Ambience'}
+              >
+                <span>🪘</span>
+                <span className="hidden sm:inline">{isDhakPlaying ? 'Playing' : 'Dhak'}</span>
+              </button>
+
+              {/* Curated Trails Button */}
+              <button
+                type="button"
+                onClick={() => setIsTrailsModalOpen(true)}
+                className="p-1.5 px-2.5 rounded-xl text-xs font-bold bg-slate-900/80 border border-white/10 text-amber-300 hover:text-white hover:border-amber-400/40 transition-all flex items-center gap-1.5"
+                title="Curated Pandal Trails"
+              >
+                <span>✨</span>
+                <span className="hidden sm:inline">Trails</span>
+              </button>
+
+              {/* Food Spots Explorer Button (Highlighted Gold Glow) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setFoodModalPandalId(selectedPandal?.id || null);
+                  setIsFoodModalOpen(true);
+                }}
+                className="p-1.5 px-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-500/20 to-amber-600/20 border border-amber-400/50 text-amber-300 hover:bg-amber-400 hover:text-slate-950 hover:border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)] transition-all flex items-center gap-1.5"
+                title="Find Nearby Food Places by Budget"
+              >
+                <span>🍲</span>
+                <span className="hidden sm:inline">Food</span>
+              </button>
+
+              {/* Emergency Helpline Button */}
+              <button
+                type="button"
+                onClick={() => setIsHelplineModalOpen(true)}
+                className="p-1.5 px-2.5 rounded-xl text-xs font-bold bg-rose-500/15 border border-rose-500/35 text-rose-300 hover:bg-rose-500/25 hover:text-white transition-all flex items-center gap-1.5"
+                title="Emergency & Traffic Helpline"
+              >
+                <span>🚨</span>
+                <span className="hidden sm:inline">SOS</span>
+              </button>
+
+              {/* View Mode Switcher */}
+              <div className="flex items-center bg-slate-900/90 border border-white/10 rounded-xl p-0.5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('map')}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
+                    viewMode === 'map'
+                      ? 'bg-amber-400 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Map View"
+                >
+                  🗺️
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
+                    viewMode === 'list'
+                      ? 'bg-amber-400 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="List View"
+                >
+                  📋
+                </button>
+              </div>
+
+              {/* Circuit Planner Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setIsCircuitModalOpen(true)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                  circuitPandalIds.length > 0
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.25)] animate-pulse'
+                    : 'bg-slate-900/80 border-white/10 text-slate-300 hover:text-white hover:border-slate-600'
+                }`}
+                title="Open Hopping Circuit Planner"
+              >
+                <span>🧭</span>
+                {circuitPandalIds.length > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center">
+                    {circuitPandalIds.length}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Search Bar Input */}
-        <div className="relative mb-2 pointer-events-auto">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search 70 pandals by name, Bengali, or metro station..."
-            className="w-full py-2 pl-9 pr-8 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/70 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all shadow-md"
-          />
-          <span className="absolute left-3 top-2.5 text-xs text-slate-400 pointer-events-none">
-            🔍
-          </span>
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs w-5 h-5 rounded-full flex items-center justify-center"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-
-        {/* Tier 1: Region Selection Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pointer-events-auto pb-1.5">
-          {(['All', 'South', 'North', 'East', 'Central'] as RegionFilter[]).map((region) => {
-            const isSelected = selectedRegion === region;
-            const conf = REGION_CONFIG[region];
-            return (
+          {/* Mobile Search Bar (Only shown on small screens) */}
+          <div className="relative block md:hidden">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search 70 pandals by name, Bengali, or metro station..."
+              className="w-full py-2 pl-8 pr-7 rounded-xl bg-slate-900/90 border border-white/10 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 transition-all shadow-inner"
+            />
+            <span className="absolute left-2.5 top-2.5 text-xs text-slate-400 pointer-events-none">
+              🔍
+            </span>
+            {searchQuery && (
               <button
-                key={region}
                 type="button"
-                onClick={() => setSelectedRegion(region)}
-                className={`whitespace-nowrap px-3 py-1 rounded-xl text-xs font-semibold transition-all duration-150 active:scale-95 ${
-                  isSelected
-                    ? 'bg-white text-slate-950 font-bold shadow-md shadow-white/10'
-                    : 'bg-slate-900/80 backdrop-blur-md text-slate-300 border border-slate-800 hover:bg-slate-800'
-                }`}
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs w-5 h-5 rounded-full flex items-center justify-center"
               >
-                {conf.label} ({conf.count})
+                ✕
               </button>
-            );
-          })}
-        </div>
+            )}
+          </div>
 
-        {/* Tier 2: Feature Quick Filters with Saved & Visited */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pointer-events-auto py-0.5">
-          {(
-            [
-              'All',
-              'Low Wait (<30m)',
-              'Senior Access',
-              'Near Metro',
-              'Saved',
-              'Visited',
-            ] as FilterChip[]
-          ).map((chip) => {
-            const isActive = activeFilter === chip;
-            return (
-              <button
-                key={chip}
-                type="button"
-                onClick={() => setActiveFilter(chip)}
-                className={`whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all duration-150 active:scale-95 ${
-                  isActive
-                    ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
-                    : 'bg-slate-900/60 backdrop-blur text-slate-400 border border-slate-800/80 hover:text-slate-200'
-                }`}
-              >
-                {chip === 'Low Wait (<30m)' && <span className="mr-1">⚡</span>}
-                {chip === 'Senior Access' && <span className="mr-1">🧓</span>}
-                {chip === 'Near Metro' && <span className="mr-1">🚇</span>}
-                {chip === 'Saved' && (
-                  <span className="mr-1">
-                    ❤️ ({savedPandalIds.length})
-                  </span>
-                )}
-                {chip === 'Visited' && (
-                  <span className="mr-1">
-                    ✓ ({visitedPandalIds.length})
-                  </span>
-                )}
-                {chip !== 'Saved' && chip !== 'Visited' && chip}
-              </button>
-            );
-          })}
+          {/* Row 2: Unified Filter Rail (Region Pills + Separator + Quick Chips) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 border-t border-white/5">
+            {/* Regions */}
+            {(['All', 'South', 'North', 'East', 'Central'] as RegionFilter[]).map((region) => {
+              const isSelected = selectedRegion === region;
+              const conf = REGION_CONFIG[region];
+              return (
+                <button
+                  key={region}
+                  type="button"
+                  onClick={() => setSelectedRegion(region)}
+                  className={`whitespace-nowrap px-2.5 py-1 rounded-xl text-xs font-bold transition-all duration-150 active:scale-95 ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                      : 'bg-slate-900/70 text-slate-300 border border-white/5 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  {conf.label.split(' ')[0]} ({conf.count})
+                </button>
+              );
+            })}
+
+            {/* Vertical Divider */}
+            <div className="h-4 w-px bg-slate-700/60 flex-shrink-0 mx-1"></div>
+
+            {/* Feature quick chips */}
+            {(
+              [
+                'Nearby Food',
+                'Low Wait (<30m)',
+                'Senior Access',
+                'Near Metro',
+                'Saved',
+                'Visited',
+              ] as FilterChip[]
+            ).map((chip) => {
+              const isActive = activeFilter === chip;
+              return (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => {
+                    if (chip === 'Nearby Food') {
+                      setFoodModalPandalId(selectedPandal?.id || null);
+                      setIsFoodModalOpen(true);
+                    } else {
+                      setActiveFilter(chip);
+                    }
+                  }}
+                  className={`whitespace-nowrap px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all duration-150 active:scale-95 ${
+                    isActive
+                      ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
+                      : chip === 'Nearby Food'
+                      ? 'bg-amber-500/15 text-amber-300 border border-amber-400/40 hover:bg-amber-500/25'
+                      : 'bg-slate-900/60 text-slate-400 border border-white/5 hover:text-slate-200'
+                  }`}
+                >
+                  {chip === 'Nearby Food' && <span className="mr-1">🍲</span>}
+                  {chip === 'Low Wait (<30m)' && <span className="mr-1">⚡</span>}
+                  {chip === 'Senior Access' && <span className="mr-1">🧓</span>}
+                  {chip === 'Near Metro' && <span className="mr-1">🚇</span>}
+                  {chip === 'Saved' && (
+                    <span className="mr-1">
+                      ❤️ ({savedPandalIds.length})
+                    </span>
+                  )}
+                  {chip === 'Visited' && (
+                    <span className="mr-1">
+                      ✓ ({visitedPandalIds.length})
+                    </span>
+                  )}
+                  {chip !== 'Saved' && chip !== 'Visited' && chip}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </header>
 
       {/* ----------------- Wait Time Legend ----------------- */}
-      <div className="absolute top-44 right-3 z-[999] flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur border border-slate-700/60 text-[10px] text-slate-300 shadow-lg pointer-events-none">
-        <span className="flex items-center gap-1 font-semibold">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>&lt;15m
-        </span>
-        <span className="flex items-center gap-1 font-semibold">
-          <span className="w-2 h-2 rounded-full bg-amber-400"></span>15-30m
-        </span>
-        <span className="flex items-center gap-1 font-semibold">
-          <span className="w-2 h-2 rounded-full bg-orange-500"></span>30-60m
-        </span>
-        <span className="flex items-center gap-1 font-semibold">
-          <span className="w-2 h-2 rounded-full bg-rose-500"></span>60m+
-        </span>
-      </div>
+      {viewMode === 'map' && circuitPandalIds.length === 0 && (
+        <div className="absolute bottom-6 left-4 z-[990] hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#0d121f]/90 backdrop-blur-xl border border-white/10 text-[11px] text-slate-300 shadow-2xl pointer-events-none">
+          <span className="flex items-center gap-1.5 font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>&lt;15m
+          </span>
+          <span className="flex items-center gap-1.5 font-bold">
+            <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>15-30m
+          </span>
+          <span className="flex items-center gap-1.5 font-bold">
+            <span className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_#f97316]"></span>30-60m
+          </span>
+          <span className="flex items-center gap-1.5 font-bold">
+            <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>60m+
+          </span>
+        </div>
+      )}
 
       {/* ----------------- Map View Mode ----------------- */}
       {viewMode === 'map' && (
@@ -708,14 +822,13 @@ export const PandalMap: React.FC<PandalMapProps> = ({
             zoomControl={false}
             style={{ width: '100%', height: '100%' }}
           >
-            {/* Custom cached TileLayer with keepBuffer and offline manager */}
+            {/* Pristine Midnight Dark Map Tiles (Zero API key watermark) */}
             <TileLayer
-              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              subdomains="abc"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               maxZoom={19}
-              className="dark-mode-tiles"
-              keepBuffer={12}
-              updateWhenIdle={true}
+              keepBuffer={8}
             />
             <TileCacheManager />
             <MapController
@@ -772,30 +885,69 @@ export const PandalMap: React.FC<PandalMapProps> = ({
                 />
               );
             })}
+
+            {/* Food Places Markers (when showFoodMarkers is true) */}
+            {showFoodMarkers &&
+              KOLKATA_FOOD_PLACES.map((food) => {
+                const isSelected = selectedFood?.id === food.id;
+                return (
+                  <Marker
+                    key={food.id}
+                    position={[food.latitude, food.longitude]}
+                    icon={createFoodIcon(food, isSelected)}
+                    eventHandlers={{
+                      click: () => {
+                        setSelectedFood(food);
+                        setSelectedPandal(null);
+                      },
+                    }}
+                  />
+                );
+              })}
           </MapContainer>
 
           {/* Floating Map Action Buttons */}
-          <div className="absolute bottom-6 right-3 z-[1000] flex flex-col gap-2 pointer-events-auto">
+          <div className="absolute bottom-6 right-3 z-[1000] flex flex-col gap-2.5 pointer-events-auto">
             {/* Locate Me Button */}
             <button
               type="button"
               onClick={handleLocateMe}
-              className={`w-11 h-11 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 text-white flex items-center justify-center shadow-xl active:scale-90 transition-all ${
+              className={`w-12 h-12 rounded-2xl bg-[#0f1422]/90 backdrop-blur-xl border border-white/10 text-white flex items-center justify-center shadow-2xl hover:border-amber-400/50 hover:bg-[#161d30] active:scale-90 transition-all group ${
                 isLocating ? 'animate-spin' : ''
               }`}
               title="My Location"
             >
-              <span className="text-lg">🎯</span>
+              <span className="text-xl group-hover:scale-110 transition-transform">🎯</span>
+            </button>
+
+            {/* Toggle Food Layer on Map Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowFoodMarkers((prev) => {
+                  const next = !prev;
+                  showToast(next ? '🍲 Food Spots Layer: Visible on Map' : '🍲 Food Spots Layer: Hidden');
+                  return next;
+                });
+              }}
+              className={`w-12 h-12 rounded-2xl backdrop-blur-xl border flex items-center justify-center shadow-2xl active:scale-90 transition-all group ${
+                showFoodMarkers
+                  ? 'bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 border-amber-300 shadow-[0_0_20px_rgba(251,191,36,0.4)] font-bold'
+                  : 'bg-[#0f1422]/90 border-white/10 text-amber-300 hover:border-amber-400/40 hover:bg-[#161d30]'
+              }`}
+              title={showFoodMarkers ? 'Hide Food Spots on Map' : 'Show Food Spots on Map'}
+            >
+              <span className="text-xl group-hover:scale-110 transition-transform">🍲</span>
             </button>
 
             {/* Curated Trails Floating Button */}
             <button
               type="button"
               onClick={() => setIsTrailsModalOpen(true)}
-              className="w-11 h-11 rounded-2xl bg-amber-500/20 backdrop-blur-md border border-amber-400/60 text-amber-300 flex items-center justify-center shadow-xl active:scale-90 transition-all"
+              className="w-12 h-12 rounded-2xl bg-amber-500/20 backdrop-blur-xl border border-amber-400/60 text-amber-300 flex items-center justify-center shadow-2xl hover:bg-amber-500/30 hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] active:scale-90 transition-all group"
               title="Curated Trails"
             >
-              <span className="text-lg">✨</span>
+              <span className="text-xl group-hover:scale-110 transition-transform">✨</span>
             </button>
 
             {/* Reset to Kolkata Center */}
@@ -804,17 +956,18 @@ export const PandalMap: React.FC<PandalMapProps> = ({
               onClick={() => {
                 setSelectedRegion('All');
                 setSelectedPandal(null);
+                setSelectedFood(null);
                 setMapFlyTarget(KOLKATA_CENTER);
               }}
-              className="w-11 h-11 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 text-white flex items-center justify-center shadow-xl active:scale-90 transition-all"
+              className="w-12 h-12 rounded-2xl bg-[#0f1422]/90 backdrop-blur-xl border border-white/10 text-white flex items-center justify-center shadow-2xl hover:border-white/30 hover:bg-[#161d30] active:scale-90 transition-all group"
               title="Reset View"
             >
-              <span className="text-lg">🔄</span>
+              <span className="text-xl group-hover:rotate-180 transition-transform duration-500">🔄</span>
             </button>
           </div>
 
           {/* Floating Route Circuit Pill (when 1+ pandals selected) */}
-          {circuitPandalIds.length > 0 && !selectedPandal && (
+          {circuitPandalIds.length > 0 && !selectedPandal && !selectedFood && (
             <div className="absolute bottom-6 left-3 right-16 z-[1000] pointer-events-auto max-w-sm">
               <button
                 type="button"
@@ -851,6 +1004,10 @@ export const PandalMap: React.FC<PandalMapProps> = ({
           onReportCrowd={(pandal) => {
             setSelectedPandal(pandal);
             setIsReportModalOpen(true);
+          }}
+          onExploreFoodForPandal={(pandal) => {
+            setFoodModalPandalId(pandal.id);
+            setIsFoodModalOpen(true);
           }}
         />
       )}
@@ -1048,6 +1205,103 @@ export const PandalMap: React.FC<PandalMapProps> = ({
               </div>
             )}
 
+            {/* ----------------- Nearby Food Spots by Budget ----------------- */}
+            {nearbyFoods.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900/90 via-slate-900/70 to-amber-950/20 border border-amber-500/30 mb-3 text-xs shadow-md">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                    <span>🍲</span>
+                    <span>Nearby Food Spots</span>
+                    <span className="text-[10px] font-normal text-slate-400">by Budget</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFoodModalPandalId(selectedPandal.id);
+                      setIsFoodModalOpen(true);
+                    }}
+                    className="text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-0.5"
+                  >
+                    <span>All ({KOLKATA_FOOD_PLACES.length})</span>
+                    <span>➔</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {nearbyFoods.map((food) => {
+                    const navUrl = getFoodNavigationUrl(food);
+                    return (
+                      <div
+                        key={food.id}
+                        className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/30 transition-all flex items-start justify-between gap-2.5"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                            <span className="font-bold text-white text-xs truncate">
+                              {food.name}
+                            </span>
+                            {food.budget_tier === 'budget' && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                🪙 {food.cost_for_two}
+                              </span>
+                            )}
+                            {food.budget_tier === 'moderate' && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                🍽️ {food.cost_for_two}
+                              </span>
+                            )}
+                            {food.budget_tier === 'premium' && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                                👑 {food.cost_for_two}
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-[11px] text-slate-400 truncate">
+                            🔥 {food.famous_dishes[0] || food.cuisine}
+                          </p>
+
+                          <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
+                            <span className="text-blue-300 font-semibold">
+                              🚶 {food.formattedDistance}
+                            </span>
+                            <span>•</span>
+                            <span className="text-slate-400 truncate">{food.landmark}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1 flex-shrink-0">
+                          <a
+                            href={navUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-1 px-2.5 rounded-lg bg-blue-600/90 hover:bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center gap-1 shadow-sm transition-all"
+                            title="Get Walking Directions"
+                          >
+                            <span>📍</span>
+                            <span>Walk</span>
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedFood(food);
+                              setSelectedPandal(null);
+                              setMapFlyTarget([food.latitude - 0.004, food.longitude]);
+                            }}
+                            className="py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium transition-all"
+                            title="View on Map"
+                          >
+                            Map
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="space-y-2 pt-1">
               {/* Row 1: Direct navigation + Add to Circuit */}
@@ -1105,6 +1359,152 @@ export const PandalMap: React.FC<PandalMapProps> = ({
         </>
       )}
 
+      {/* ----------------- Floating Food Details Bottom Card ----------------- */}
+      {selectedFood && !selectedPandal && (
+        <>
+          {/* Dimmed backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[1001] transition-opacity duration-200"
+            onClick={() => setSelectedFood(null)}
+          />
+
+          <section
+            role="dialog"
+            aria-modal="true"
+            className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-[1002] bg-[#141824]/95 backdrop-blur-2xl border-t border-amber-500/30 rounded-t-3xl shadow-2xl p-4 pb-6 transition-transform duration-150 animate-in slide-in-from-bottom-5 max-h-[85vh] overflow-y-auto"
+          >
+            {/* Draggable indicator */}
+            <div className="w-10 h-1 bg-slate-600/70 rounded-full mx-auto mb-3" />
+
+            {/* Header: Bengali name + English Name + Rating + Close */}
+            <div className="flex items-start justify-between gap-3 mb-2.5">
+              <div>
+                {selectedFood.name_bn && (
+                  <span className="text-xs font-semibold text-amber-400 tracking-wide block mb-0.5">
+                    {selectedFood.name_bn}
+                  </span>
+                )}
+                <h2 className="text-lg font-bold text-white font-heading flex items-center gap-2">
+                  <span>{selectedFood.name}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700 font-bold text-amber-300">
+                    ★ {selectedFood.rating}
+                  </span>
+                </h2>
+                <span className="text-[11px] text-slate-400">{selectedFood.cuisine}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedFood(null)}
+                aria-label="Close food card"
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm transition-colors flex-shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Budget & Price Banner */}
+            <div className="flex items-center justify-between p-3 rounded-2xl mb-2.5 bg-slate-800/80 border border-slate-700/80">
+              <div className="flex items-center gap-1.5">
+                {selectedFood.budget_tier === 'budget' && (
+                  <span className="text-xs font-bold text-emerald-300 flex items-center gap-1">
+                    <span>🪙</span> Pocket Friendly
+                  </span>
+                )}
+                {selectedFood.budget_tier === 'moderate' && (
+                  <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
+                    <span>🍽️</span> Casual &amp; Family Dining
+                  </span>
+                )}
+                {selectedFood.budget_tier === 'premium' && (
+                  <span className="text-xs font-bold text-purple-300 flex items-center gap-1">
+                    <span>👑</span> Grand Pujo Feast
+                  </span>
+                )}
+              </div>
+              <div className="text-xs font-extrabold text-white">
+                {selectedFood.cost_for_two}
+              </div>
+            </div>
+
+            {/* Famous Signature Dishes */}
+            <div className="mb-2.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                🔥 Must Try Signature Dishes:
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {selectedFood.famous_dishes.map((dish, i) => (
+                  <span
+                    key={i}
+                    className="text-[11px] font-medium px-2.5 py-0.5 rounded-lg bg-slate-800 text-amber-200 border border-slate-700"
+                  >
+                    {dish}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Location, Landmark & Metro */}
+            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs mb-3 space-y-1.5">
+              <div className="flex items-start gap-1.5 text-slate-300">
+                <span className="text-amber-400 text-sm flex-shrink-0">📍</span>
+                <div>
+                  <span className="font-semibold text-white">{selectedFood.address}</span>
+                  <span className="block text-[11px] text-slate-400">
+                    Landmark: {selectedFood.landmark}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-[11px] text-slate-400 pt-1.5 border-t border-slate-800/80">
+                <span className="text-sky-400">
+                  🚇 {selectedFood.nearest_metro} ({selectedFood.metro_walk_mins}m walk)
+                </span>
+                <span>•</span>
+                <span className="text-amber-400/90">🕒 {selectedFood.pujo_timing}</span>
+              </div>
+            </div>
+
+            {/* Action Buttons: Walk Navigation + Share + Open Full Explorer */}
+            <div className="flex items-center gap-2">
+              <a
+                href={getFoodNavigationUrl(selectedFood)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-3 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all text-center flex items-center justify-center gap-1.5"
+              >
+                <span>📍</span>
+                <span>Walking Nav</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const text = generateFoodShareText(selectedFood);
+                  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                  window.open(whatsappUrl, '_blank');
+                }}
+                className="py-3 px-3.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all"
+                title="Share on WhatsApp"
+              >
+                📲 Share
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFoodModalOpen(true);
+                }}
+                className="py-3 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold transition-all"
+                title="Open Food Explorer"
+              >
+                🍲 Explorer
+              </button>
+            </div>
+          </section>
+        </>
+      )}
+
       {/* ----------------- Curated Pandal Trails Modal ----------------- */}
       <CuratedCircuitsModal
         isOpen={isTrailsModalOpen}
@@ -1146,6 +1546,24 @@ export const PandalMap: React.FC<PandalMapProps> = ({
             selectedPandal.senior_line = report.senior_lane_open;
             showToast('✅ Wait time reported! Thank you.');
           }
+        }}
+      />
+
+      {/* ----------------- Food Explorer Modal ----------------- */}
+      <FoodExplorerModal
+        isOpen={isFoodModalOpen}
+        onClose={() => setIsFoodModalOpen(false)}
+        allFoodPlaces={KOLKATA_FOOD_PLACES}
+        userLocation={userLocation}
+        selectedPandal={selectedPandal}
+        allPandals={pandals}
+        initialPandalId={foodModalPandalId}
+        onSelectFoodOnMap={(food) => {
+          setSelectedFood(food);
+          setSelectedPandal(null);
+          setMapFlyTarget([food.latitude - 0.005, food.longitude]);
+          setViewMode('map');
+          showToast(`📍 Centered on ${food.name}`);
         }}
       />
     </div>

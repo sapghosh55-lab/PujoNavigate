@@ -35,4 +35,6 @@ export type FilterChip =
   | 'Senior Access'
   | 'Near Metro'
   | 'Saved'
-  | 'Visited';
+  | 'Visited'
+  | 'Nearby Food';
+

@@ -68,36 +68,38 @@ export const CircuitPlannerModal: React.FC<CircuitPlannerModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-0 sm:p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4 animate-in fade-in duration-200 select-none"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="w-full max-w-lg max-h-[90vh] bg-[#141824] border border-slate-700/80 rounded-t-3xl sm:rounded-2xl p-5 text-slate-100 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200"
+        className="w-full max-w-lg max-h-[90vh] bg-[#0d121f]/95 backdrop-blur-2xl border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 text-slate-100 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Mobile drag handle */}
-        <div className="w-10 h-1 bg-slate-600/70 rounded-full mx-auto mb-3 sm:hidden" />
+        <div className="w-12 h-1.5 bg-slate-600/60 rounded-full mx-auto mb-3 sm:hidden" />
 
         {/* Modal Header */}
-        <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-800">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🧭</span>
-              <h2 className="text-lg font-bold text-white tracking-tight">
+        <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 text-xl shadow-lg shadow-amber-500/10">
+              🧭
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
                 Pedestrian Hopping Circuit
               </h2>
+              <p className="text-xs text-amber-400 font-semibold">
+                Nearest-Neighbor TSP with Kolkata Police Barrier Bypass
+              </p>
             </div>
-            <p className="text-xs text-amber-400 font-medium mt-0.5">
-              Nearest-Neighbor TSP with Kolkata Police Barrier Bypass
-            </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm transition-colors"
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center text-sm transition-all active:scale-90"
           >
             ✕
           </button>
@@ -131,30 +133,30 @@ export const CircuitPlannerModal: React.FC<CircuitPlannerModalProps> = ({
 
           {/* Stats Summary Card (when circuit is ready) */}
           {circuit && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 text-center">
-                <span className="block text-[10px] text-slate-400 uppercase font-bold">Total Walk</span>
-                <span className="text-sm font-extrabold text-sky-400">{circuit.totalDistanceKm} km</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="bg-[#141b2d]/80 p-3 rounded-2xl border border-white/[0.08] text-center shadow-md">
+                <span className="block text-[10px] text-slate-400 uppercase font-extrabold tracking-wider">Total Walk</span>
+                <span className="text-base font-black text-sky-400">{circuit.totalDistanceKm} km</span>
               </div>
-              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 text-center">
-                <span className="block text-[10px] text-slate-400 uppercase font-bold">Walk Time</span>
-                <span className="text-sm font-extrabold text-emerald-400">{circuit.totalWalkingMinutes} mins</span>
+              <div className="bg-[#141b2d]/80 p-3 rounded-2xl border border-white/[0.08] text-center shadow-md">
+                <span className="block text-[10px] text-slate-400 uppercase font-extrabold tracking-wider">Walk Time</span>
+                <span className="text-base font-black text-emerald-400">{circuit.totalWalkingMinutes}m</span>
               </div>
-              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 text-center">
-                <span className="block text-[10px] text-slate-400 uppercase font-bold">Queue Time</span>
-                <span className="text-sm font-extrabold text-amber-400">~{circuit.totalPandalWaitMinutes} mins</span>
+              <div className="bg-[#141b2d]/80 p-3 rounded-2xl border border-white/[0.08] text-center shadow-md">
+                <span className="block text-[10px] text-slate-400 uppercase font-extrabold tracking-wider">Queue Time</span>
+                <span className="text-base font-black text-amber-400">~{circuit.totalPandalWaitMinutes}m</span>
               </div>
-              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 text-center">
-                <span className="block text-[10px] text-slate-400 uppercase font-bold">Total Trip</span>
-                <span className="text-sm font-extrabold text-purple-400">{circuit.totalTripMinutes} mins</span>
+              <div className="bg-[#141b2d]/80 p-3 rounded-2xl border border-white/[0.08] text-center shadow-md">
+                <span className="block text-[10px] text-slate-400 uppercase font-extrabold tracking-wider">Total Trip</span>
+                <span className="text-base font-black text-purple-400">{circuit.totalTripMinutes}m</span>
               </div>
             </div>
           )}
 
           {/* Police Barricade Crossings Used */}
           {circuit && circuit.crossingsUsed.length > 0 && (
-            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-              <div className="flex items-center gap-1.5 font-bold text-xs text-emerald-300 mb-1">
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 shadow-md">
+              <div className="flex items-center gap-1.5 font-bold text-xs text-emerald-300 mb-1.5">
                 <span>🛡️</span>
                 <span>Verified Pedestrian Bypass Waypoints:</span>
               </div>
@@ -170,39 +172,39 @@ export const CircuitPlannerModal: React.FC<CircuitPlannerModalProps> = ({
 
           {/* Step-by-Step Circuit Itinerary */}
           <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+            <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2.5">
               Optimal Visit Order:
             </h4>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {circuit ? (
                 circuit.orderedPandals.map((pandal, idx) => {
                   const leg = circuit.legs[idx];
                   return (
                     <div
                       key={pandal.id}
-                      className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 relative flex items-start justify-between gap-3"
+                      className="p-3.5 rounded-2xl bg-[#141b2d]/80 border border-white/[0.08] hover:border-amber-400/30 relative flex items-start justify-between gap-3 shadow-md transition-all group"
                     >
-                      <div className="flex items-start gap-2.5">
-                        <span className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
                           {idx + 1}
                         </span>
                         <div>
                           {pandal.name_bn && (
-                            <p className="text-[11px] text-amber-400 font-medium">
+                            <p className="text-[11px] text-amber-400/90 font-bold font-bengali">
                               {pandal.name_bn}
                             </p>
                           )}
-                          <h5 className="font-bold text-white text-xs">
+                          <h5 className="font-extrabold text-white text-xs group-hover:text-amber-300 transition-colors">
                             {pandal.name_en}
                           </h5>
                           <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
-                            <span>Wait: ~{pandal.wait_time_minutes ?? 15}m</span>
+                            <span className="text-amber-300 font-semibold">Wait: ~{pandal.wait_time_minutes ?? 15}m</span>
                             {pandal.nearest_metro && (
                               <span>• Metro: {pandal.nearest_metro}</span>
                             )}
                           </div>
                           {leg && leg.navigationTip && (
-                            <p className="text-[10px] text-emerald-400 mt-1 italic">
+                            <p className="text-[10px] text-emerald-400 mt-1.5 italic font-medium">
                               ↪ {leg.navigationTip}
                             </p>
                           )}
@@ -211,7 +213,7 @@ export const CircuitPlannerModal: React.FC<CircuitPlannerModalProps> = ({
                       <button
                         type="button"
                         onClick={() => onRemovePandal(pandal.id)}
-                        className="text-slate-500 hover:text-rose-400 text-xs px-2 py-1 rounded hover:bg-slate-700/50 transition-colors"
+                        className="text-slate-500 hover:text-rose-400 text-xs w-7 h-7 rounded-lg hover:bg-white/5 flex items-center justify-center transition-all"
                         title="Remove from circuit"
                       >
                         ✕
@@ -226,20 +228,20 @@ export const CircuitPlannerModal: React.FC<CircuitPlannerModalProps> = ({
                   return (
                     <div
                       key={pandal.id}
-                      className="p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/40 flex items-center justify-between gap-2"
+                      className="p-3 rounded-2xl bg-[#141b2d]/70 border border-white/[0.08] flex items-center justify-between gap-2 shadow-sm"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-slate-700 text-slate-300 font-bold text-[10px] flex items-center justify-center">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-5 h-5 rounded-full bg-white/10 text-slate-300 font-extrabold text-[10px] flex items-center justify-center">
                           {idx + 1}
                         </span>
-                        <span className="text-xs font-semibold text-white">
+                        <span className="text-xs font-bold text-white">
                           {pandal.name_en}
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => onRemovePandal(pandal.id)}
-                        className="text-slate-500 hover:text-rose-400 text-xs p-1"
+                        className="text-slate-500 hover:text-rose-400 text-xs w-6 h-6 rounded flex items-center justify-center hover:bg-white/5 transition-colors"
                       >
                         ✕
                       </button>
@@ -252,7 +254,7 @@ export const CircuitPlannerModal: React.FC<CircuitPlannerModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
+        <div className="pt-3 border-t border-white/10 flex items-center gap-2">
           {circuit ? (
             <button
               type="button"
@@ -260,7 +262,7 @@ export const CircuitPlannerModal: React.FC<CircuitPlannerModalProps> = ({
                 onViewRouteOnMap();
                 onClose();
               }}
-              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               <span>🗺️</span>
               <span>View Route on Map</span>
@@ -269,7 +271,7 @@ export const CircuitPlannerModal: React.FC<CircuitPlannerModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs active:scale-[0.98] transition-all"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 font-bold text-xs active:scale-[0.98] transition-all border border-white/10"
             >
               Back to Map
             </button>

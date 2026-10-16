@@ -12,6 +12,7 @@ interface PandalListViewProps {
   onToggleSaved: (pandalId: string) => void;
   onToggleVisited: (pandalId: string) => void;
   onReportCrowd: (pandal: Pandal) => void;
+  onExploreFoodForPandal?: (pandal: Pandal) => void;
 }
 
 export const PandalListView: React.FC<PandalListViewProps> = ({
@@ -24,6 +25,7 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
   onToggleSaved,
   onToggleVisited,
   onReportCrowd,
+  onExploreFoodForPandal,
 }) => {
   const [sortBy, setSortBy] = useState<'wait' | 'metro' | 'name'>('wait');
 
@@ -38,20 +40,23 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
   });
 
   return (
-    <div className="w-full h-full overflow-y-auto px-3.5 pt-44 pb-28 text-slate-100 max-w-4xl mx-auto">
+    <div className="w-full h-full overflow-y-auto px-3.5 pt-36 sm:pt-32 pb-28 text-slate-100 max-w-5xl mx-auto">
       {/* List Toolbar / Sort */}
-      <div className="flex items-center justify-between mb-4 bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-slate-800">
-        <span className="text-xs text-slate-400 font-semibold">
-          Showing <strong className="text-white">{sortedPandals.length}</strong> Pandals
-        </span>
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="text-slate-400">Sort by:</span>
+      <div className="flex items-center justify-between mb-5 bg-[#0f1424]/85 backdrop-blur-xl p-3.5 rounded-2xl border border-white/10 shadow-xl">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+          <span className="text-xs text-slate-300 font-bold">
+            Showing <strong className="text-white font-extrabold">{sortedPandals.length}</strong> Pandals
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-slate-400 font-medium">Sort:</span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="bg-slate-800 text-amber-300 font-semibold rounded-lg px-2.5 py-1 text-xs border border-slate-700 outline-none cursor-pointer"
+            className="bg-[#182035] text-amber-300 font-bold rounded-xl px-3 py-1.5 text-xs border border-white/10 outline-none cursor-pointer hover:border-amber-400/40 transition-colors shadow-sm"
           >
-            <option value="wait">⚡ Lowest Wait</option>
+            <option value="wait">⚡ Lowest Wait Time</option>
             <option value="metro">🚶 Nearest Metro</option>
             <option value="name">🔤 Name (A-Z)</option>
           </select>
@@ -59,7 +64,7 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {sortedPandals.map((pandal) => {
           const waitTime = pandal.wait_time_minutes ?? 15;
           const colorConfig = getWaitTimeColorConfig(waitTime);
@@ -71,25 +76,25 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
           return (
             <div
               key={pandal.id}
-              className={`group bg-slate-900/85 hover:bg-slate-800/90 transition-all duration-200 border rounded-2xl p-4 shadow-lg flex flex-col justify-between ${
+              className={`group bg-[#101524]/90 hover:bg-[#141b2f] backdrop-blur-xl transition-all duration-300 border rounded-3xl p-5 shadow-xl hover:shadow-2xl hover:shadow-amber-500/5 flex flex-col justify-between ${
                 isVisited
-                  ? 'border-emerald-500/40 bg-emerald-950/15'
-                  : 'border-slate-800/80 hover:border-slate-700'
+                  ? 'border-emerald-500/40 bg-emerald-950/20'
+                  : 'border-white/[0.08] hover:border-amber-400/40'
               }`}
             >
               <div>
                 {/* Top Row: Bengali name + Wait Badge + Saved heart */}
-                <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <div className="flex-1">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex-1 min-w-0">
                     {pandal.name_bn && (
-                      <span className="text-xs font-semibold text-amber-400 block tracking-wide">
+                      <span className="text-xs font-bold text-amber-400/90 block tracking-wide font-bengali mb-0.5">
                         {pandal.name_bn}
                       </span>
                     )}
-                    <h3 className="text-base font-bold text-white leading-snug group-hover:text-amber-300 transition-colors flex items-center gap-2">
-                      <span>{pandal.name_en}</span>
+                    <h3 className="text-base sm:text-lg font-extrabold text-white leading-snug group-hover:text-amber-300 transition-colors flex items-center gap-2">
+                      <span className="truncate">{pandal.name_en}</span>
                       {isVisited && (
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.2 rounded-full font-bold">
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold flex-shrink-0">
                           ✓ Visited
                         </span>
                       )}
@@ -101,7 +106,7 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onToggleSaved(pandal.id)}
-                      className="p-1 rounded-lg text-sm text-slate-400 hover:text-rose-400 transition-colors"
+                      className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-sm transition-all active:scale-90"
                       title={isSaved ? 'Remove from wishlist' : 'Save to wishlist'}
                     >
                       {isSaved ? '❤️' : '🤍'}
@@ -109,10 +114,10 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
 
                     {/* Wait Time Gauge */}
                     <div
-                      className={`px-2.5 py-1 rounded-xl text-xs font-extrabold border flex items-center gap-1.5 ${colorConfig.badgeBg}`}
+                      className={`px-3 py-1 rounded-full text-xs font-black border flex items-center gap-1.5 shadow-sm ${colorConfig.badgeBg}`}
                     >
                       <span
-                        className="w-2 h-2 rounded-full"
+                        className="w-2 h-2 rounded-full shadow-sm animate-pulse"
                         style={{ background: colorConfig.pulseRgba }}
                       />
                       <span>~{waitTime}m</span>
@@ -121,15 +126,16 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
                 </div>
 
                 {/* Cluster & Location Subtext */}
-                <div className="text-[11px] text-slate-400 flex items-center gap-2 mb-3">
+                <div className="text-xs text-slate-400 flex items-center gap-2 mb-3.5">
                   {pandal.cluster && (
-                    <span className="bg-slate-800 px-2 py-0.5 rounded text-slate-300">
+                    <span className="bg-slate-800/80 border border-white/5 px-2.5 py-0.5 rounded-lg text-slate-300 text-[11px] font-medium">
                       {pandal.cluster}
                     </span>
                   )}
                   {pandal.nearest_metro && (
-                    <span className="text-slate-300">
-                      🚇 {pandal.nearest_metro} ({pandal.walk_mins ?? 10}m walk)
+                    <span className="text-slate-300 text-[11px] flex items-center gap-1">
+                      <span>🚇</span>
+                      <span>{pandal.nearest_metro} ({pandal.walk_mins ?? 10}m walk)</span>
                     </span>
                   )}
                 </div>
@@ -137,22 +143,22 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
                 {/* Feature Tags */}
                 <div className="flex flex-wrap gap-1.5 mb-4">
                   {pandal.senior_line && (
-                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold">
                       🧓 Senior Lane
                     </span>
                   )}
                   {pandal.wheelchair_access && (
-                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300">
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 font-semibold">
                       ♿ Wheelchair
                     </span>
                   )}
                   {pandal.medical_kiosk && (
-                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300">
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 font-semibold">
                       🩺 Medical
                     </span>
                   )}
                   {pandal.metro_line && (
-                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-slate-800/90 border border-white/10 text-slate-300 font-semibold">
                       {pandal.metro_line} Line
                     </span>
                   )}
@@ -160,14 +166,14 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
               </div>
 
               {/* Action Buttons Row */}
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-800/80">
+              <div className="flex items-center gap-2 pt-3 border-t border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => onSelectPandal(pandal)}
-                  className="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 px-3 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-bold text-xs active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   <span>📍</span>
-                  <span>View on Map</span>
+                  <span>View Map</span>
                 </button>
 
                 <button
@@ -175,8 +181,8 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
                   onClick={() => onToggleCircuit(pandal.id)}
                   className={`py-2 px-3 rounded-xl font-bold text-xs active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 border ${
                     isSelectedInCircuit
-                      ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md shadow-amber-400/20'
-                      : 'bg-slate-800/70 hover:bg-slate-700 text-slate-300 border-slate-700/60'
+                      ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md shadow-amber-400/20 font-black'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/10'
                   }`}
                   title={isSelectedInCircuit ? 'Remove from circuit' : 'Add to circuit'}
                 >
@@ -197,20 +203,33 @@ export const PandalListView: React.FC<PandalListViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onToggleVisited(pandal.id)}
-                  className={`py-2 px-2.5 rounded-xl border transition-colors ${
+                  className={`py-2 px-2.5 rounded-xl border transition-all active:scale-95 ${
                     isVisited
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border-slate-700/60'
+                      ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/50 shadow-sm'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border-white/10'
                   }`}
                   title={isVisited ? 'Mark unvisited' : 'Mark as visited'}
                 >
                   ✓
                 </button>
 
+                {/* Nearby Food Shortcut */}
+                {onExploreFoodForPandal && (
+                  <button
+                    type="button"
+                    onClick={() => onExploreFoodForPandal(pandal)}
+                    className="py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-400/30 transition-all text-xs font-bold flex items-center gap-1 shadow-sm active:scale-95"
+                    title="Find nearby food places by budget"
+                  >
+                    <span>🍲</span>
+                    <span>Food</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => onReportCrowd(pandal)}
-                  className="py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700/60 transition-colors"
+                  className="py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 transition-all active:scale-95"
                   title="Report Wait Time"
                 >
                   📢
